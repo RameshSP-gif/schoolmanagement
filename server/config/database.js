@@ -9,7 +9,13 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // SSL configuration for cloud databases (PlanetScale, etc.)
+  ssl: process.env.DB_HOST && process.env.DB_HOST.includes('psdb.cloud') 
+    ? { rejectUnauthorized: true } 
+    : process.env.NODE_ENV === 'production' 
+    ? { rejectUnauthorized: false } 
+    : undefined
 });
 
 // Test connection
