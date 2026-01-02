@@ -33,15 +33,30 @@ Username: your_username (what you entered)
 Password: your_password (what you entered)
 ```
 
-#### 3. Initialize Database with phpMyAdmin
-1. Go to https://www.db4free.net/phpMyAdmin/
-2. Login with your credentials
-3. Click on your database name in left sidebar
-4. Click "SQL" tab at the top
-5. Open your `database.sql` file in a text editor
-6. Copy ALL the SQL content
-7. Paste into the SQL query box
-8. Click "Go" to execute
+#### 3. Wait for Activation (IMPORTANT!)
+⚠️ **After registration, wait 5-10 minutes** for the account to be fully activated.
+You'll receive a confirmation email when ready.
+
+#### 4. Initialize Database with phpMyAdmin
+1. **Wait for confirmation email** before trying to login
+2. Go to https://www.db4free.net/phpMyAdmin/
+3. Login with your credentials (use exact username/password from registration)
+4. If you get "Access Denied" error:
+   - Double-check username and password (case-sensitive!)
+   - Wait another 5-10 minutes
+   - Try again
+5. Once logged in, click on your database name in left sidebar
+6. Click "SQL" tab at the top
+7. Open your `database.sql` file in a text editor
+8. Copy ALL the SQL content
+9. Paste into the SQL query box
+10. Click "Go" to execute
+
+**Troubleshooting Access Denied Error:**
+- Username and password are **case-sensitive**
+- Make sure you confirmed the email
+- Wait at least 10 minutes after registration
+- If still not working after 15 minutes, try FreeSQLDatabase.com below
 
 #### 4. Add to Vercel Environment Variables
 Go to: https://vercel.com/rameshsp-gifs-projects/schoolmanagement/settings/environment-variables
