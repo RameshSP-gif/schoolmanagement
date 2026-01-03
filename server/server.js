@@ -3,6 +3,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 require('dotenv').config();
 
+// Initialize database
+const { initDatabase } = require('./config/database');
+
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/students');
 const teacherRoutes = require('./routes/teachers');
@@ -13,6 +16,13 @@ const feeRoutes = require('./routes/fees');
 const announcementRoutes = require('./routes/announcements');
 
 const app = express();
+
+// Initialize database before starting server
+initDatabase().then(() => {
+  console.log('✅ Database ready');
+}).catch(err => {
+  console.error('❌ Database init failed:', err);
+});
 
 // Middleware
 app.use(cors({
