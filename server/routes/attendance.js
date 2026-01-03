@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -40,7 +40,7 @@ router.get('/', auth, authorize('admin', 'teacher', 'staff'), async (req, res) =
     
     query += ' ORDER BY a.date DESC, s.roll_number';
     
-    const [attendance] = await pool.query(query, params);
+    const [attendance] = query(query, params);
     
     res.json(attendance);
   } catch (error) {
@@ -63,7 +63,7 @@ router.post('/', auth, authorize('teacher', 'admin'), async (req, res) => {
       req.user.id
     ]);
 
-    await pool.query(
+    query(
       `INSERT INTO attendance (student_id, class_id, date, status, remarks, marked_by)
        VALUES ?
        ON DUPLICATE KEY UPDATE status = VALUES(status), remarks = VALUES(remarks), marked_by = VALUES(marked_by)`,
@@ -82,7 +82,7 @@ router.put('/:id', auth, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { status, remarks } = req.body;
 
-    await pool.query(
+    query(
       `UPDATE attendance SET status = ?, remarks = ? WHERE id = ?`,
       [status, remarks, req.params.id]
     );
@@ -122,7 +122,7 @@ router.get('/statistics/:student_id', auth, async (req, res) => {
       params.push(end_date);
     }
     
-    const [stats] = await pool.query(query, params);
+    const [stats] = query(query, params);
     
     res.json(stats[0]);
   } catch (error) {

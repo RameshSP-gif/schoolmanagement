@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -35,7 +35,7 @@ router.get('/', auth, authorize('admin', 'staff'), async (req, res) => {
     
     query += ' ORDER BY f.due_date DESC';
     
-    const [fees] = await pool.query(query, params);
+    const [fees] = query(query, params);
     
     res.json(fees);
   } catch (error) {
@@ -47,7 +47,7 @@ router.get('/', auth, authorize('admin', 'staff'), async (req, res) => {
 // Get student fees
 router.get('/student/:student_id', auth, async (req, res) => {
   try {
-    const [fees] = await pool.query(`
+    const [fees] = query(`
       SELECT f.*
       FROM fees f
       WHERE f.student_id = ?
@@ -66,7 +66,7 @@ router.post('/', auth, authorize('admin', 'staff'), async (req, res) => {
   try {
     const { student_id, fee_type, amount, due_date, academic_year, remarks } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO fees (student_id, fee_type, amount, due_date, academic_year, remarks)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [student_id, fee_type, amount, due_date, academic_year, remarks]
@@ -87,7 +87,7 @@ router.put('/:id', auth, authorize('admin', 'staff'), async (req, res) => {
   try {
     const { student_id, fee_type, amount, due_date, academic_year, remarks, status } = req.body;
 
-    await pool.query(
+    query(
       `UPDATE fees SET student_id = ?, fee_type = ?, amount = ?, due_date = ?, 
        academic_year = ?, remarks = ?, status = ?
        WHERE id = ?`,
@@ -107,7 +107,7 @@ router.post('/:id/pay', auth, authorize('admin', 'staff'), async (req, res) => {
     const { paid_amount, payment_mode, payment_date } = req.body;
 
     // Get current fee
-    const [fees] = await pool.query('SELECT amount, paid_amount FROM fees WHERE id = ?', [req.params.id]);
+    const [fees] = query('SELECT amount, paid_amount FROM fees WHERE id = ?', [req.params.id]);
     
     if (fees.length === 0) {
       return res.status(404).json({ message: 'Fee not found' });
@@ -116,7 +116,7 @@ router.post('/:id/pay', auth, authorize('admin', 'staff'), async (req, res) => {
     const totalPaid = (fees[0].paid_amount || 0) + paid_amount;
     const status = totalPaid >= fees[0].amount ? 'paid' : 'partial';
 
-    await pool.query(
+    query(
       `UPDATE fees SET paid_amount = ?, status = ?, payment_mode = ?, payment_date = ?
        WHERE id = ?`,
       [totalPaid, status, payment_mode, payment_date || new Date(), req.params.id]
@@ -134,7 +134,7 @@ router.put('/:id/status', auth, authorize('admin', 'staff'), async (req, res) =>
   try {
     const { status } = req.body;
 
-    await pool.query('UPDATE fees SET status = ? WHERE id = ?', [status, req.params.id]);
+    query('UPDATE fees SET status = ? WHERE id = ?', [status, req.params.id]);
 
     res.json({ message: 'Fee status updated successfully' });
   } catch (error) {
@@ -146,7 +146,7 @@ router.put('/:id/status', auth, authorize('admin', 'staff'), async (req, res) =>
 // Get fee statistics
 router.get('/statistics', auth, authorize('admin', 'staff'), async (req, res) => {
   try {
-    const [stats] = await pool.query(`
+    const [stats] = query(`
       SELECT 
         COUNT(*) as total_fees,
         SUM(amount) as total_amount,

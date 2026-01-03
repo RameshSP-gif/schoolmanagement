@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -35,7 +35,7 @@ router.get('/', auth, authorize('admin', 'teacher', 'staff'), async (req, res) =
     
     query += ' ORDER BY c.grade_level, c.section, s.roll_number';
     
-    const [students] = await pool.query(query, params);
+    const [students] = query(query, params);
     
     res.json(students);
   } catch (error) {
@@ -47,7 +47,7 @@ router.get('/', auth, authorize('admin', 'teacher', 'staff'), async (req, res) =
 // Get single student
 router.get('/:id', auth, async (req, res) => {
   try {
-    const [students] = await pool.query(`
+    const [students] = query(`
       SELECT s.*, u.first_name, u.last_name, u.email, u.phone, u.address, u.date_of_birth, u.gender, u.profile_image,
              c.name as class_name, c.grade_level, c.section,
              p.first_name as parent_first_name, p.last_name as parent_last_name, p.email as parent_email, p.phone as parent_phone
@@ -170,14 +170,14 @@ router.put('/:id', auth, authorize('admin', 'staff'), async (req, res) => {
 // Delete student
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
-    const [students] = await pool.query('SELECT user_id FROM students WHERE id = ?', [req.params.id]);
+    const [students] = query('SELECT user_id FROM students WHERE id = ?', [req.params.id]);
     
     if (students.length === 0) {
       return res.status(404).json({ message: 'Student not found' });
     }
 
     // Soft delete - deactivate user
-    await pool.query('UPDATE users SET is_active = false WHERE id = ?', [students[0].user_id]);
+    query('UPDATE users SET is_active = false WHERE id = ?', [students[0].user_id]);
 
     res.json({ message: 'Student deleted successfully' });
   } catch (error) {
@@ -212,7 +212,7 @@ router.get('/:id/attendance', auth, async (req, res) => {
     
     query += ' ORDER BY a.date DESC';
     
-    const [attendance] = await pool.query(query, params);
+    const [attendance] = query(query, params);
     
     res.json(attendance);
   } catch (error) {
@@ -224,7 +224,7 @@ router.get('/:id/attendance', auth, async (req, res) => {
 // Get student grades
 router.get('/:id/grades', auth, async (req, res) => {
   try {
-    const [grades] = await pool.query(`
+    const [grades] = query(`
       SELECT er.*, e.name as exam_name, e.exam_type, e.total_marks, e.date as exam_date,
              s.name as subject_name, c.name as class_name
       FROM exam_results er
@@ -245,13 +245,13 @@ router.get('/:id/grades', auth, async (req, res) => {
 // Get student assignments
 router.get('/:id/assignments', auth, async (req, res) => {
   try {
-    const [student] = await pool.query('SELECT class_id FROM students WHERE id = ?', [req.params.id]);
+    const [student] = query('SELECT class_id FROM students WHERE id = ?', [req.params.id]);
     
     if (student.length === 0) {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    const [assignments] = await pool.query(`
+    const [assignments] = query(`
       SELECT a.*, s.name as subject_name, 
              CONCAT(u.first_name, ' ', u.last_name) as teacher_name,
              asub.submission_date, asub.marks_obtained, asub.file_path as submission_file

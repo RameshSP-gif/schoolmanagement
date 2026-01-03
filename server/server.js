@@ -16,12 +16,16 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  origin: process.env.CLIENT_URL || process.env.VERCEL_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -35,7 +39,29 @@ app.use('/api/announcements', announcementRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'School Management System API is running' });
+  res.json({ 
+    status: 'OK', 
+    message: 'School Management System API is running',
+    environment: process.env.NODE_ENV,
+    database: process.env.DB_HOST ? 'configured' : 'not configured',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root API route
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: 'School Management System API',
+    version: '1.0.0',
+    endpoints: [
+      '/api/health',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/students',
+      '/api/teachers',
+      '/api/classes'
+    ]
+  });
 });
 
 // Error handling middleware

@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -31,7 +31,7 @@ router.get('/', auth, authorize('admin', 'staff', 'teacher'), async (req, res) =
     
     query += ' ORDER BY u.first_name, u.last_name';
     
-    const [teachers] = await pool.query(query, params);
+    const [teachers] = query(query, params);
     
     res.json(teachers);
   } catch (error) {
@@ -43,7 +43,7 @@ router.get('/', auth, authorize('admin', 'staff', 'teacher'), async (req, res) =
 // Get single teacher
 router.get('/:id', auth, async (req, res) => {
   try {
-    const [teachers] = await pool.query(`
+    const [teachers] = query(`
       SELECT t.*, u.first_name, u.last_name, u.email, u.phone, u.address, u.date_of_birth, u.gender, u.profile_image
       FROM teachers t
       JOIN users u ON t.user_id = u.id
@@ -162,14 +162,14 @@ router.put('/:id', auth, authorize('admin'), async (req, res) => {
 // Delete teacher
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
-    const [teachers] = await pool.query('SELECT user_id FROM teachers WHERE id = ?', [req.params.id]);
+    const [teachers] = query('SELECT user_id FROM teachers WHERE id = ?', [req.params.id]);
     
     if (teachers.length === 0) {
       return res.status(404).json({ message: 'Teacher not found' });
     }
 
     // Soft delete - deactivate user
-    await pool.query('UPDATE users SET is_active = false WHERE id = ?', [teachers[0].user_id]);
+    query('UPDATE users SET is_active = false WHERE id = ?', [teachers[0].user_id]);
 
     res.json({ message: 'Teacher deleted successfully' });
   } catch (error) {
@@ -181,7 +181,7 @@ router.delete('/:id', auth, authorize('admin'), async (req, res) => {
 // Get teacher's classes
 router.get('/:id/classes', auth, async (req, res) => {
   try {
-    const [classes] = await pool.query(`
+    const [classes] = query(`
       SELECT c.*, COUNT(s.id) as student_count
       FROM classes c
       LEFT JOIN students s ON c.id = s.class_id
@@ -200,7 +200,7 @@ router.get('/:id/classes', auth, async (req, res) => {
 // Get teacher's subjects
 router.get('/:id/subjects', auth, async (req, res) => {
   try {
-    const [subjects] = await pool.query(`
+    const [subjects] = query(`
       SELECT cs.*, s.name as subject_name, s.code, c.name as class_name, c.grade_level
       FROM class_subjects cs
       JOIN subjects s ON cs.subject_id = s.id
@@ -219,7 +219,7 @@ router.get('/:id/subjects', auth, async (req, res) => {
 // Get teacher's schedule
 router.get('/:id/schedule', auth, async (req, res) => {
   try {
-    const [schedule] = await pool.query(`
+    const [schedule] = query(`
       SELECT t.*, s.name as subject_name, c.name as class_name, c.grade_level
       FROM timetable t
       JOIN subjects s ON t.subject_id = s.id

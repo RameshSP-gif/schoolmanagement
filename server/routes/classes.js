@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 // Get all classes
 router.get('/', auth, async (req, res) => {
   try {
-    const [classes] = await pool.query(`
+    const [classes] = query(`
       SELECT c.*, 
              CONCAT(u.first_name, ' ', u.last_name) as teacher_name,
              COUNT(s.id) as student_count
@@ -29,7 +29,7 @@ router.get('/', auth, async (req, res) => {
 // Get single class
 router.get('/:id', auth, async (req, res) => {
   try {
-    const [classes] = await pool.query(`
+    const [classes] = query(`
       SELECT c.*, 
              CONCAT(u.first_name, ' ', u.last_name) as teacher_name,
              t.employee_id
@@ -55,7 +55,7 @@ router.post('/', auth, authorize('admin'), async (req, res) => {
   try {
     const { name, grade_level, section, teacher_id, academic_year, capacity } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO classes (name, grade_level, section, teacher_id, academic_year, capacity)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [name, grade_level, section, teacher_id, academic_year, capacity]
@@ -76,7 +76,7 @@ router.put('/:id', auth, authorize('admin'), async (req, res) => {
   try {
     const { name, grade_level, section, teacher_id, academic_year, capacity } = req.body;
 
-    await pool.query(
+    query(
       `UPDATE classes SET name = ?, grade_level = ?, section = ?, teacher_id = ?, academic_year = ?, capacity = ?
        WHERE id = ?`,
       [name, grade_level, section, teacher_id, academic_year, capacity, req.params.id]
@@ -92,7 +92,7 @@ router.put('/:id', auth, authorize('admin'), async (req, res) => {
 // Delete class
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
-    await pool.query('DELETE FROM classes WHERE id = ?', [req.params.id]);
+    query('DELETE FROM classes WHERE id = ?', [req.params.id]);
     res.json({ message: 'Class deleted successfully' });
   } catch (error) {
     console.error('Delete class error:', error);
@@ -103,7 +103,7 @@ router.delete('/:id', auth, authorize('admin'), async (req, res) => {
 // Get class students
 router.get('/:id/students', auth, async (req, res) => {
   try {
-    const [students] = await pool.query(`
+    const [students] = query(`
       SELECT s.*, u.first_name, u.last_name, u.email, u.phone, u.profile_image
       FROM students s
       JOIN users u ON s.user_id = u.id
@@ -121,7 +121,7 @@ router.get('/:id/students', auth, async (req, res) => {
 // Get class subjects
 router.get('/:id/subjects', auth, async (req, res) => {
   try {
-    const [subjects] = await pool.query(`
+    const [subjects] = query(`
       SELECT cs.*, s.name as subject_name, s.code,
              CONCAT(u.first_name, ' ', u.last_name) as teacher_name
       FROM class_subjects cs
@@ -143,7 +143,7 @@ router.post('/:id/subjects', auth, authorize('admin'), async (req, res) => {
   try {
     const { subject_id, teacher_id } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO class_subjects (class_id, subject_id, teacher_id) VALUES (?, ?, ?)`,
       [req.params.id, subject_id, teacher_id]
     );

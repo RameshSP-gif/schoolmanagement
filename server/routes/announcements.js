@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -30,7 +30,7 @@ router.get('/', auth, async (req, res) => {
     
     query += ' ORDER BY a.created_at DESC';
     
-    const [announcements] = await pool.query(query, params);
+    const [announcements] = query(query, params);
     
     res.json(announcements);
   } catch (error) {
@@ -44,7 +44,7 @@ router.post('/', auth, authorize('admin', 'teacher'), async (req, res) => {
   try {
     const { title, content, target_audience } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO announcements (title, content, target_audience, posted_by)
        VALUES (?, ?, ?, ?)`,
       [title, content, target_audience, req.user.id]
@@ -65,7 +65,7 @@ router.put('/:id', auth, authorize('admin', 'teacher'), async (req, res) => {
   try {
     const { title, content, target_audience, is_active } = req.body;
 
-    await pool.query(
+    query(
       `UPDATE announcements SET title = ?, content = ?, target_audience = ?, is_active = ?
        WHERE id = ?`,
       [title, content, target_audience, is_active, req.params.id]
@@ -81,7 +81,7 @@ router.put('/:id', auth, authorize('admin', 'teacher'), async (req, res) => {
 // Delete announcement
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
-    await pool.query('UPDATE announcements SET is_active = false WHERE id = ?', [req.params.id]);
+    query('UPDATE announcements SET is_active = false WHERE id = ?', [req.params.id]);
     res.json({ message: 'Announcement deleted successfully' });
   } catch (error) {
     console.error('Delete announcement error:', error);

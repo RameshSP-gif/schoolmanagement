@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -18,7 +18,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if user already exists
-    const [existingUsers] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    const [existingUsers] = query('SELECT id FROM users WHERE email = ?', [email]);
     
     if (existingUsers.length > 0) {
       return res.status(400).json({ message: 'User with this email already exists' });
@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert user
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO users (email, password, role, first_name, last_name, phone, address, date_of_birth, gender) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [email, hashedPassword, role, first_name, last_name, phone, address, date_of_birth, gender]
@@ -38,21 +38,21 @@ router.post('/register', async (req, res) => {
 
     // Insert into role-specific table
     if (role === 'student') {
-      await pool.query(
+      query(
         `INSERT INTO students (user_id, admission_number, admission_date) 
-         VALUES (?, ?, NOW())`,
+         VALUES (?, ?, datetime('now'))`,
         [userId, `STU${userId.toString().padStart(5, '0')}`]
       );
     } else if (role === 'teacher') {
-      await pool.query(
+      query(
         `INSERT INTO teachers (user_id, employee_id, joining_date) 
-         VALUES (?, ?, NOW())`,
+         VALUES (?, ?, datetime('now'))`,
         [userId, `TCH${userId.toString().padStart(5, '0')}`]
       );
     } else if (role === 'staff') {
-      await pool.query(
+      query(
         `INSERT INTO staff (user_id, employee_id, joining_date) 
-         VALUES (?, ?, NOW())`,
+         VALUES (?, ?, datetime('now'))`,
         [userId, `STF${userId.toString().padStart(5, '0')}`]
       );
     }
@@ -73,8 +73,8 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Find user
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE email = ? AND is_active = true',
+    const [users] = query(
+      'SELECT * FROM users WHERE email = ? AND is_active = 1',
       [email]
     );
 
@@ -102,19 +102,19 @@ router.post('/login', async (req, res) => {
     let roleInfo = {};
     
     if (user.role === 'student') {
-      const [students] = await pool.query('SELECT * FROM students WHERE user_id = ?', [user.id]);
+      const [students] = query('SELECT * FROM students WHERE user_id = ?', [user.id]);
       if (students[0]) {
         const { id, ...rest } = students[0];
         roleInfo = { student_id: id, ...rest };
       }
     } else if (user.role === 'teacher') {
-      const [teachers] = await pool.query('SELECT * FROM teachers WHERE user_id = ?', [user.id]);
+      const [teachers] = query('SELECT * FROM teachers WHERE user_id = ?', [user.id]);
       if (teachers[0]) {
         const { id, ...rest } = teachers[0];
         roleInfo = { teacher_id: id, ...rest };
       }
     } else if (user.role === 'staff') {
-      const [staff] = await pool.query('SELECT * FROM staff WHERE user_id = ?', [user.id]);
+      const [staff] = query('SELECT * FROM staff WHERE user_id = ?', [user.id]);
       if (staff[0]) {
         const { id, ...rest } = staff[0];
         roleInfo = { staff_id: id, ...rest };
@@ -143,7 +143,7 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', auth, async (req, res) => {
   try {
-    const [users] = await pool.query(
+    const [users] = query(
       'SELECT id, email, role, first_name, last_name, phone, address, date_of_birth, gender, profile_image FROM users WHERE id = ?',
       [req.user.id]
     );
@@ -158,25 +158,25 @@ router.get('/me', auth, async (req, res) => {
     let roleInfo = {};
     
     if (user.role === 'student') {
-      const [students] = await pool.query('SELECT * FROM students WHERE user_id = ?', [user.id]);
+      const [students] = query('SELECT * FROM students WHERE user_id = ?', [user.id]);
       if (students[0]) {
         const { id, ...rest } = students[0];
         roleInfo = { student_id: id, ...rest };
       }
     } else if (user.role === 'teacher') {
-      const [teachers] = await pool.query('SELECT * FROM teachers WHERE user_id = ?', [user.id]);
+      const [teachers] = query('SELECT * FROM teachers WHERE user_id = ?', [user.id]);
       if (teachers[0]) {
         const { id, ...rest } = teachers[0];
         roleInfo = { teacher_id: id, ...rest };
       }
     } else if (user.role === 'staff') {
-      const [staff] = await pool.query('SELECT * FROM staff WHERE user_id = ?', [user.id]);
+      const [staff] = query('SELECT * FROM staff WHERE user_id = ?', [user.id]);
       if (staff[0]) {
         const { id, ...rest } = staff[0];
         roleInfo = { staff_id: id, ...rest };
       }
     } else if (user.role === 'parent') {
-      const [children] = await pool.query(`
+      const [children] = query(`
         SELECT s.*, u.first_name, u.last_name, c.name as class_name
         FROM students s
         JOIN users u ON s.user_id = u.id
@@ -198,7 +198,7 @@ router.put('/change-password', auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    const [users] = await pool.query('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    const [users] = query('SELECT password FROM users WHERE id = ?', [req.user.id]);
     
     if (users.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -212,7 +212,7 @@ router.put('/change-password', auth, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
-    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.user.id]);
+    query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.user.id]);
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {

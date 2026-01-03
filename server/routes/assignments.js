@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/database');
+const { query } = require('../config/database');
 const { auth, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -41,7 +41,7 @@ router.get('/', auth, async (req, res) => {
     
     query += ' ORDER BY a.due_date DESC';
     
-    const [assignments] = await pool.query(query, params);
+    const [assignments] = query(query, params);
     
     res.json(assignments);
   } catch (error) {
@@ -53,7 +53,7 @@ router.get('/', auth, async (req, res) => {
 // Get single assignment
 router.get('/:id', auth, async (req, res) => {
   try {
-    const [assignments] = await pool.query(`
+    const [assignments] = query(`
       SELECT a.*, 
              s.name as subject_name,
              c.name as class_name,
@@ -85,13 +85,13 @@ router.post('/', auth, authorize('teacher', 'admin'), async (req, res) => {
     // Get teacher_id
     let teacher_id;
     if (req.user.role === 'teacher') {
-      const [teacher] = await pool.query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       teacher_id = teacher[0]?.id;
     } else {
       teacher_id = req.body.teacher_id;
     }
 
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO assignments (title, description, class_id, subject_id, teacher_id, due_date, total_marks, file_path)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [title, description, class_id, subject_id, teacher_id, due_date, total_marks, file_path]
@@ -112,7 +112,7 @@ router.put('/:id', auth, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { title, description, due_date, total_marks, file_path } = req.body;
 
-    await pool.query(
+    query(
       `UPDATE assignments SET title = ?, description = ?, due_date = ?, total_marks = ?, file_path = ?
        WHERE id = ?`,
       [title, description, due_date, total_marks, file_path, req.params.id]
@@ -128,7 +128,7 @@ router.put('/:id', auth, authorize('teacher', 'admin'), async (req, res) => {
 // Delete assignment
 router.delete('/:id', auth, authorize('teacher', 'admin'), async (req, res) => {
   try {
-    await pool.query('DELETE FROM assignments WHERE id = ?', [req.params.id]);
+    query('DELETE FROM assignments WHERE id = ?', [req.params.id]);
     res.json({ message: 'Assignment deleted successfully' });
   } catch (error) {
     console.error('Delete assignment error:', error);
@@ -142,13 +142,13 @@ router.post('/:id/submit', auth, authorize('student'), async (req, res) => {
     const { file_path, remarks } = req.body;
     
     // Get student_id
-    const [student] = await pool.query('SELECT id FROM students WHERE user_id = ?', [req.user.id]);
+    const [student] = query('SELECT id FROM students WHERE user_id = ?', [req.user.id]);
     
     if (!student.length) {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    const [result] = await pool.query(
+    const [result] = query(
       `INSERT INTO assignment_submissions (assignment_id, student_id, file_path, remarks)
        VALUES (?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), remarks = VALUES(remarks), submission_date = NOW()`,
@@ -173,11 +173,11 @@ router.put('/submissions/:id/grade', auth, authorize('teacher', 'admin'), async 
     // Get teacher_id
     let graded_by;
     if (req.user.role === 'teacher') {
-      const [teacher] = await pool.query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       graded_by = teacher[0]?.id;
     }
 
-    await pool.query(
+    query(
       `UPDATE assignment_submissions SET marks_obtained = ?, graded_by = ?, graded_at = NOW()
        WHERE id = ?`,
       [marks_obtained, graded_by, req.params.id]
@@ -193,7 +193,7 @@ router.put('/submissions/:id/grade', auth, authorize('teacher', 'admin'), async 
 // Get assignment submissions
 router.get('/:id/submissions', auth, authorize('teacher', 'admin'), async (req, res) => {
   try {
-    const [submissions] = await pool.query(`
+    const [submissions] = query(`
       SELECT asub.*, 
              CONCAT(u.first_name, ' ', u.last_name) as student_name,
              s.admission_number, s.roll_number
